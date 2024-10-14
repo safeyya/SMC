@@ -39,7 +39,7 @@ function single_link_manipulator_simulation()
     nu = 0.001;  % event-triggering threshold
     w = 0.0005;  % Chosen value for w, smaller than nu
 
-    % Matrix M for sliding surface (from draft)
+    % Matrix M for sliding surface 
     M = [1, 3, 3];  % Example values for the sliding surface weights
 
     % Initial conditions (z(0))
