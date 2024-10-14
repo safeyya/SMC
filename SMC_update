@@ -102,12 +102,12 @@ function dx = manipulator_dynamics(t, x, M, K, lambda, epsilon, delta, nu, w, a,
 end
 
 function sigma = compute_sigma(x, M, lambda)
-    % Sliding surface calculation (sigma) with M
+    % Sliding surface calculation 
     sigma = lambda * (M(1)*x(1) + M(2)*x(2) + M(3)*x(3) + x(4));  
 end
 
 function sigma_dot = compute_sigma_dot(x, M, a, b, c)
-    % Time derivative of sliding surface calculation (sigma_dot)
+    % Time derivative of sliding surface 
  
     
    sigma_dot = M(1)*x(2) + M(2)*(-a * sin(x(1)) - b * (x(1) - x(3))) + M(3)*x(4);
