@@ -40,13 +40,15 @@ function single_link_manipulator_simulation()
     w = 0.0005;  % Chosen value for w, smaller than nu
 
     % Matrix M for sliding surface 
-    M = [1, 3, 3];  % Example values for the sliding surface weights
+    M = [1, 3, 3]; 
 
-    % Initial conditions (z(0))
+   
+% Initial conditions (z(0))
     z0 = [pi/6; 0; pi/6; 0];  
     t_span = [0, 30];  
 
-    % Solve 
+   
+% Solve 
     [t, x] = ode45(@(t, x) manipulator_dynamics(t, x, M, K, lambda, epsilon, delta, nu, w, a, b, c, d, ...
                                                  underline_omega_0, overline_omega_0, ...
                                                  underline_omega_1, overline_omega_1, ...
@@ -61,7 +63,8 @@ function single_link_manipulator_simulation()
     plot(t, x(:,3), 'b--', 'LineWidth', 4);
     xlabel('Time (s)', 'FontSize', 24, 'FontWeight', 'bold');
     ylabel('Angle', 'FontSize', 24, 'FontWeight', 'bold');
-    title('Angular Positions \theta_1 and \theta_2 Over Time', 'FontSize', 30, 'FontWeight', 'bold');
+   
+title('Angular Positions \theta_1 and \theta_2 Over Time', 'FontSize', 30, 'FontWeight', 'bold');
     legend('\theta_1', '\theta_2', 'Location', 'Best', 'FontSize', 24, 'FontWeight', 'bold');
     set(gca, 'FontSize', 18, 'FontWeight', 'bold');
     grid on;
