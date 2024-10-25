@@ -97,7 +97,7 @@ function dx = manipulator_dynamics(t, x, M, K, lambda, epsilon, delta, nu, w, a,
                                    underline_omega_2, overline_omega_2, ...
                                    underline_omega_3, overline_omega_3)
     % Sliding surface
-    sigma = compute_sigma(x, M, lambda);
+    sigma = compute_sigma(x, M);
 
     % State-dependent uncertainties (72)
     [omega_0, omega_1, omega_2, omega_3] = compute_omega(x, a, b, c, d);
@@ -112,9 +112,9 @@ function dx = manipulator_dynamics(t, x, M, K, lambda, epsilon, delta, nu, w, a,
           c * (x(1) - x(3)) + d * u];
 end
 
-function sigma = compute_sigma(x, M, lambda)
+function sigma = compute_sigma(x, M)
     % Sliding surface calculation 
-    sigma = lambda * (M(1)*x(1) + M(2)*x(2) + M(3)*x(3) + x(4));  
+    sigma =  (M(1)*x(1) + M(2)*x(2) + M(3)*x(3) + x(4));  
 end
 
 function u = event_triggered_control(t, x, sigma, K, epsilon, delta, nu, w, omega_0, omega_1, omega_2, omega_3)
@@ -141,7 +141,7 @@ function u = event_triggered_control(t, x, sigma, K, epsilon, delta, nu, w, omeg
     elseif abs(sigma) == w  
         u = u;  
     elseif abs(sigma) < w  
-        u = 0;  % keep the control input 
+        u = u;  % keep the control input 
     end
 end
 
