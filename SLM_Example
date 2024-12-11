@@ -1,6 +1,5 @@
 function single_link_manipulator_simulation()
     % System parameters
-    
     I = 1.0;     
     J = 1.0;     
     m0 = 1.0;     
@@ -13,52 +12,36 @@ function single_link_manipulator_simulation()
     d = 1 / J;    
 
     % Control parameters from Theorem 1
-    K = 18;       % Control gain 
-    delta = 1.1;  % Uncertainty parameter from Theorem 1
+    K = 30;       % Control gain 
+    delta = 1.1;  % Uncertainty parameter
     
-    % Define lambda bound from Equation (7)
+    % Define lambda bound (Equation 7)
     q = 3; 
     n = 4;  % Number of states
     lambda_bound = 1 / (2 * (q + n - 1)); 
     lambda = 0.9 * lambda_bound;  
     
-    % Values for r_i and s_l from Equation (9)
-    r_1 = 4.4;  
-    r_2 = 3.3;  
-    r_3 = 2.2;  
-    r_i = [r_1, r_2, r_3];
-    s_1 = 2.2;
-    s_2 = 6.6;
-    s_3 = 6.6;
-    s_l = [s_1, s_2, s_3];  
+    % Values for r_i and s_l (Equation 9)
+    r_i = [4.4, 3.3, 2.2];
+    s_l = [2.2, 6.6, 6.6];  
     
-    % Compute epsilon from Equation (8)
+    % Compute epsilon (Equation 8)
     epsilon = (lambda * K) / (2 * max([r_i, s_l]));
 
-    % Uncertainty bounds for omega 
-    underline_omega_0 = .5; overline_omega_0 = 3;
-    underline_omega_1 = 0.5; overline_omega_1 = 2;
-    underline_omega_2 = 0.2; overline_omega_2 = 1.5;
-    underline_omega_3 = 0.1; overline_omega_3 = 1;
+    % Event-triggering thresholds
+    nu = 0.001;  
+    w = 0.00005;  
 
-    % Define nu and w 
-    nu = 0.001;  % event-triggering threshold
-    w = 0.00005;  % Chosen value for w, smaller than nu
-
-    % M for sliding surface 
+    % Sliding surface coefficients
     M = [1, 3, 3];  
 
     % Initial conditions (z(0))
     z0 = [pi/6; 0; pi/6; 0];  
     t_span = [0, 50];  
 
-    % Solve with corrected ode45 call
+    % Solve using ode45
     params = struct('M', M, 'K', K, 'lambda', lambda, 'epsilon', epsilon, ...
-                    'delta', delta, 'nu', nu, 'w', w, 'a', a, 'b', b, 'c', c, 'd', d, ...
-                    'underline_omega_0', underline_omega_0, 'overline_omega_0', overline_omega_0, ...
-                    'underline_omega_1', underline_omega_1, 'overline_omega_1', overline_omega_1, ...
-                    'underline_omega_2', underline_omega_2, 'overline_omega_2', overline_omega_2, ...
-                    'underline_omega_3', underline_omega_3, 'overline_omega_3', overline_omega_3);
+                    'delta', delta, 'nu', nu, 'w', w, 'a', a, 'b', b, 'c', c, 'd', d);
 
     [t, x] = ode45(@(t, x) manipulator_dynamics(t, x, params), t_span, z0);
 
@@ -69,16 +52,12 @@ function single_link_manipulator_simulation()
     plot(t, x(:,3), 'b--', 'LineWidth', 4);
     xlabel('Time (s)', 'FontSize', 24, 'FontWeight', 'bold');
     ylabel('Angle', 'FontSize', 24, 'FontWeight', 'bold');
-    title('Angular Positions \theta_1 and \theta_2 Over Time', 'FontSize', 30, 'FontWeight', 'bold');
-    legend('\theta_1', '\theta_2', 'Location', 'Best', 'FontSize', 24, 'FontWeight', 'bold');
+    title('Angular Positions \\theta_1 and \\theta_2 Over Time', 'FontSize', 30, 'FontWeight', 'bold');
+    legend('\\theta_1', '\\theta_2', 'Location', 'Best', 'FontSize', 24, 'FontWeight', 'bold');
     set(gca, 'FontSize', 18, 'FontWeight', 'bold');
     grid on;
     ylim([-1, 1.2]);
     yticks(-1:0.5:1); 
-    ax = gca;
-    ax.YAxis.FontSize = 24; 
-    ax.YAxis.FontWeight = 'bold'; 
-    set(gca, 'YTickLabel', get(gca,'YTickLabel'), 'FontSize', 24, 'FontWeight', 'bold');
     print(gcf, 'high_res_figure.png', '-dpng', '-r300');
 end
 
@@ -86,10 +65,10 @@ function dx = manipulator_dynamics(t, x, params)
     % Sliding surface
     sigma = compute_sigma(x, params.M);
 
-    % State-dependent uncertainties (72)
+    % State-dependent uncertainties
     [omega_0, omega_1, omega_2, omega_3] = compute_omega(x, params.a, params.b, params.c, params.d);
 
-    % Event-triggered control 
+    % Event-triggered control
     u = event_triggered_control(x, sigma, params, omega_0, omega_1, omega_2, omega_3);
 
     % System dynamics update
@@ -100,120 +79,76 @@ function dx = manipulator_dynamics(t, x, params)
 end
 
 function sigma = compute_sigma(x, M)
-    % Sliding surface calculation 
     sigma =  (M(1)*x(1) + M(2)*x(2) + M(3)*x(3) + x(4));  
 end
 
 function u = event_triggered_control(x, sigma, params, omega_0, omega_1, omega_2, omega_3)
-    % Control law with event-triggering from Theorem 1
+    % Compute  \mathcal{A}_i^{(j)} and \mathcal{B}_l^{(j)}
+    x_sharp = compute_x_sharp(x);
     sign_sigma = sign(sigma);
 
-    % Compute \mathcal{A}_i(x) for each index i
-    A1 = compute_A1(x, params.epsilon);
-    A2 = compute_A2(x, params.epsilon);
-    A3 = compute_A3(x, params.epsilon);
-    
-    % Compute \mathcal{B}_\ell(x) for each index l
-    x_sharp = compute_x_sharp(x);  
-    B1 = compute_B1(x_sharp, params.epsilon);
-    B2 = compute_B2(x_sharp, params.epsilon);
-    B3 = compute_B3(x_sharp, params.epsilon);
-    
-    % Control law from Equation 21
-    u = -params.K * sign_sigma + abs(sign_sigma) * (A1 + B1 + A2 + B2 + A3 + B3);
+    A1 = compute_A(x_sharp, params.epsilon, sign_sigma, 4.4);
+    A2 = compute_A(x_sharp, params.epsilon, sign_sigma, 3.3);
+    A3 = compute_A(x_sharp, params.epsilon, sign_sigma, 2.2);
 
-    
-    persistent A_prev B_prev sigma_prev
+    B1 = compute_B(x_sharp, params.epsilon, 2.2);
+    B2 = compute_B(x_sharp, params.epsilon, 6.6);
+    B3 = compute_B(x_sharp, params.epsilon, 6.6);
+
+    % Compute control law from Equation (21)
+    u = -params.K * sign_sigma + abs(sign_sigma) * (A1 + A2 + A3 + B1 + B2 + B3);
+
+    %  store previous states
+    persistent A_prev B_prev
     if isempty(A_prev)
         A_prev = [A1, A2, A3]; 
         B_prev = [B1, B2, B3]; 
-        sigma_prev = sigma;
     end
 
-    % Calculate C_{r,j} based on (25)
-    summ = 2 * (3 + 4 - 1) * params.K * params.lambda;  % 2(q + n - 1) * K * lambda
-    C_rj = sum(abs([A1, A2, A3] - A_prev)) + sum(abs([B1, B2, B3] - B_prev)) >= summ;
+    % Compute C_{r,j} from Equation (25)
+    S = 2 * params.lambda * params.K * (3 + 4 - 1);  % 2 * λ * K * (q + n - 1)
+    C_rj = sum(abs([A1, A2, A3] - A_prev)) + sum(abs([B1, B2, B3] - B_prev)) >= S;
 
-    % Apply triggering mechanism (22)-(24) with C_{r,j} condition
-    if abs(sigma) >= params.nu  % Condition from Equation (22)
-        u = u;  % Apply control when sigma exceeds nu
-        A_prev = [A1, A2, A3]; 
-        B_prev = [B1, B2, B3]; 
-        sigma_prev = sigma;
-    elseif C_rj  % Conditionin  Equation (25)
-        u = u;  % Update control if C_{r,j} condition holds
-        A_prev = [A1, A2, A3]; 
-        B_prev = [B1, B2, B3]; 
-        sigma_prev = sigma;
-    elseif abs(sigma) == params.w  % Condition from Equation (23)
-        u = u;  % Control stays active at w
-    elseif abs(sigma) < params.w  % Condition from Equation (24)
-        u = u;  % Control is held when sigma < w
+    % Apply triggering mechanism from Equations (22)–(26)
+    if abs(sigma) >= params.nu  % Condition (22)
+        % Trigger update
+        A_prev = [A1, A2, A3];
+        B_prev = [B1, B2, B3];
+    elseif abs(sigma) == params.w  % Condition (23)
+        
+        u = u; 
+    elseif abs(sigma) < params.w  % Condition (24)
+       % (no update)
+        u = u; 
+    elseif C_rj  
+        % Update if condition C_{r,j} holds
+        A_prev = [A1, A2, A3];
+        B_prev = [B1, B2, B3];
+    end
+end
+
+function A = compute_A(x_sharp, epsilon, sign_sigma, r_i)
+    g_i = sin(x_sharp(1));
+    if abs(g_i) >= epsilon
+        A = (-1)^sign_sigma * r_i * sign(g_i);
+    else
+        A = (-1)^sign_sigma * (g_i / epsilon);
+    end
+end
+
+function B = compute_B(x_sharp, epsilon, s_l)
+    g_l = abs(x_sharp(1));  
+    if abs(g_l) >= epsilon
+        B = s_l * sign(g_l);
+    else
+        B = g_l / epsilon;
     end
 end
 
 function x_sharp = compute_x_sharp(x)
-    % Define x_sharp 
-    x_sharp = [x(2), x(3), x(4)];  
+    x_sharp = [x(2), x(3), x(4)];
 end
 
-% Functions for \mathcal{A}_i(x) for i = 1, 2, 3
-function A1 = compute_A1(x, epsilon)
-    g_i1 = sin(x(1));  
-    if abs(g_i1) >= epsilon
-        A1 = -4.4 * sign(g_i1);  % Using r_1 = 4.4
-    else
-        A1 = (-g_i1 / epsilon);  
-    end
-end
-
-function A2 = compute_A2(x, epsilon)
-    g_i2 = x(2)^2;  
-    if abs(g_i2) >= epsilon
-        A2 = -3.3 * sign(g_i2);  % Using r_2 = 3.3
-    else
-        A2 = (-g_i2 / epsilon);  
-    end
-end
-
-function A3 = compute_A3(x, epsilon)
-    g_i3 = x(3);  
-    if abs(g_i3) >= epsilon
-        A3 = -2.2 * sign(g_i3);  % Using r_3 = 2.2
-    else
-        A3 = (-g_i3 / epsilon);  
-    end
-end
-
-% Functions for \mathcal{B}_\ell(x) for l = 1, 2, 3
-function B1 = compute_B1(x_sharp, epsilon)
-    g_l1 = abs(x_sharp(1));  
-    if abs(g_l1) >= epsilon
-        B1 = 2.2 * sign(g_l1);  % Using s_1 = 2.2
-    else
-        B1 = (g_l1 / epsilon);  
-    end
-end
-
-function B2 = compute_B2(x_sharp, epsilon)
-    g_l2 = abs(x_sharp(2));  
-    if abs(g_l2) >= epsilon
-        B2 = 6.6 * sign(g_l2);  % Using s_2 = 6.6
-    else
-        B2 = (g_l2 / epsilon);  
-    end
-end
-
-function B3 = compute_B3(x_sharp, epsilon)
-    g_l3 = abs(x_sharp(3));  
-    if abs(g_l3) >= epsilon
-        B3 = 6.6 * sign(g_l3);  % Using s_3 = 6.6
-    else
-        B3 = (g_l3 / epsilon);  
-    end
-end
-
-% Function for computing the omega values (Equation 72)
 function [omega_0, omega_1, omega_2, omega_3] = compute_omega(x, a, b, c, d)
     theta1 = x(1);
     omega_0 = b * d;  
